@@ -1,0 +1,245 @@
+-- --VIEW_ODPV_AJUSTE_CM_PJ
+WITH AJUSTE_CM_PJ AS  (
+  SELECT  
+    'ODPV'                                                             AS MNEMONICO
+    ,CASE GCC.SEGMENT1
+            WHEN '01'   THEN 'ODPV'
+            WHEN '05'   THEN 'BBDENTAL'
+        ELSE 'OUTRO'
+        END                                                     +
+      CASE GCC.SEGMENT1
+            WHEN '01'   THEN '30194-9'
+            WHEN '05'   THEN '41941-9'
+        ELSE 'OUTRO'
+        END                                                     +
+      '4'                                                       +
+      HCA.ACCOUNT_NUMBER                                        +
+      RCTA.TRX_NUMBER                                           +
+      -- COALESCE((SELECT CASE
+      --       WHEN upper(NAME) = upper('Resumo de Contra Prestação Pecuniária') THEN 'COMP_RISCO'
+      --       ELSE NULL
+      --     END CD_PRODUTO
+      --   FROM [FUSION].[oci_ar_memo_lines_all_tl] AML
+      --   WHERE 1 = 1
+      --     --AND AML.org_id = rctla.org_id
+      --     --AND AML.memo_line_seq_id = rctla.memo_line_seq_id
+      --     AND LANGUAGE = /*userenv('LANG')*/'PTB'
+      --     AND upper(NAME) IN (upper('Resumo de Contra Prestação Pecuniária')) ),'')  +
+            COALESCE((SELECT CASE
+            WHEN upper(CUST.NAME) = upper('PJ-CORRESP (PRE)') THEN 'COMP_RISCO'
+            ELSE NULL
+          END CD_PRODUTO
+        FROM [FUSION].[OCI_RA_CUST_TRX_TYPES_ALL] CUST
+        WHERE 1 = 1
+          AND CAST(rcta.CUST_TRX_TYPE_SEQ_ID AS FLOAT) = CAST(CUST.CUST_TRX_TYPE_SEQ_ID AS FLOAT) --AND AML.org_id = rctla.org_id
+          --AND memo_line_seq_id = rctla.memo_line_seq_id
+          --AND LANGUAGE = /*userenv('LANG')*/'PTB'
+          AND upper(CUST.NAME) IN (upper('PJ-CORRESP (PRE)')) ),'')  +
+      COALESCE(RCTLA.ATTRIBUTE14,'')                                 +
+      '-' + GCC.SEGMENT4                                             +
+      '-' + FORMAT(CONVERT(DATETIME,RCTLGDA.GL_DATE), 'yyyy-MM-dd')  +
+      '-CM-PJ'                                                        AS INSTID
+    ,RCTA.TRX_NUMBER                                                  AS FATURA
+    ,CAST(TE.CD_EMPRESA          AS NVARCHAR)                        +
+      -- COALESCE((SELECT CASE
+      --       WHEN upper(NAME) = upper('Resumo de Contra Prestação Pecuniária') THEN 'COMP_RISCO'
+      --       ELSE NULL
+      --     END CD_PRODUTO
+      --   FROM [FUSION].[oci_ar_memo_lines_all_tl] AML
+      --   WHERE 1 = 1
+      --     --AND AML.org_id = rctla.org_id
+      --     --AND AML.memo_line_seq_id = rctla.memo_line_seq_id
+      --     AND LANGUAGE = /*userenv('LANG')*/'PTB'
+      --     AND upper(NAME) IN (upper('Resumo de Contra Prestação Pecuniária')) ),'') AS CONTRATO_PLANO
+      COALESCE((SELECT CASE
+      WHEN upper(CUST.NAME) = upper('PJ-CORRESP (PRE)') THEN 'COMP_RISCO'
+      ELSE NULL
+    END CD_PRODUTO
+        FROM [FUSION].[OCI_RA_CUST_TRX_TYPES_ALL] CUST
+        WHERE 1 = 1
+          AND CAST(rcta.CUST_TRX_TYPE_SEQ_ID AS FLOAT) = CAST(CUST.CUST_TRX_TYPE_SEQ_ID AS FLOAT) --AND AML.org_id = rctla.org_id
+          --AND memo_line_seq_id = rctla.memo_line_seq_id
+          --AND LANGUAGE = /*userenv('LANG')*/'PTB'
+          AND upper(CUST.NAME) IN (upper('PJ-CORRESP (PRE)')) ),'')  AS CONTRATO_PLANO
+    ,CASE GCC.SEGMENT1
+            WHEN '01'   THEN 'ODPV'
+            WHEN '05'   THEN 'BBDT'
+        ELSE 'OUTRO'
+        END                                                           AS CD_COMPANHIA
+    ,CASE GCC.SEGMENT1
+            WHEN '01'   THEN '30194-9'
+            WHEN '05'   THEN '41941-9'
+        ELSE 'OUTRO'
+        END                                                           AS CD_ENTIDADE
+    ,'4'                                                              AS CD_RAMO 
+    ,''                                                               AS CD_SUBRAMO 
+    -- ,COALESCE((SELECT CASE
+    --         WHEN upper(NAME) = upper('Resumo de Contra Prestação Pecuniária') THEN 'COMP_RISCO'
+    --         ELSE NULL
+    --       END CD_PRODUTO
+    --     FROM [FUSION].[oci_ar_memo_lines_all_tl] AML
+    --     WHERE 1 = 1
+    --       --AND AML.org_id = rctla.org_id
+    --       --AND AML.memo_line_seq_id = rctla.memo_line_seq_id
+    --       AND LANGUAGE = /*userenv('LANG')*/'PTB'
+    --       AND upper(NAME) IN (upper('Resumo de Contra Prestação Pecuniária')) ),'')   AS CD_PRODUTO
+    ,COALESCE((SELECT CASE
+      WHEN upper(CUST.NAME) = upper('PJ-CORRESP (PRE)') THEN 'COMP_RISCO'
+      ELSE NULL
+    END CD_PRODUTO
+        FROM [FUSION].[OCI_RA_CUST_TRX_TYPES_ALL] CUST
+        WHERE 1 = 1
+          AND CAST(rcta.CUST_TRX_TYPE_SEQ_ID AS FLOAT) = CAST(CUST.CUST_TRX_TYPE_SEQ_ID AS FLOAT) --AND AML.org_id = rctla.org_id
+          --AND memo_line_seq_id = rctla.memo_line_seq_id
+          --AND LANGUAGE = /*userenv('LANG')*/'PTB'
+          AND upper(CUST.NAME) IN (upper('PJ-CORRESP (PRE)')) ),'')   AS CD_PRODUTO
+    ,'ODONTOLOGICO'                                                   AS NM_RAMO
+    ,''                                                               AS NM_SUBRAMO
+    ,RCTLA.DESCRIPTION                                                AS NM_PRODUTO
+    ,FORMAT(CONVERT(DATETIME,RCTLGDA.GL_DATE), 'yyyy')                AS ANO_CONTABIL
+    ,FORMAT(CONVERT(DATETIME,RCTLGDA.GL_DATE), 'MM')                  AS MES_CONTABIL
+    ,'CANCELAMENTO'                                                   AS TIPO_MOVIMENTO
+    ,GCC.SEGMENT4                                                     AS CD_CONTA_CONTABIL
+    ,CONCAT(HCA.ACCOUNT_NUMBER,'0')                                   AS ENDOSSO
+    ,CAST(RCTLA.EXTENDED_AMOUNT AS DECIMAL(22,2))                     AS VALOR_MOVIMENTO
+    ,FORMAT(CONVERT(DATETIME,RCTLGDA.GL_DATE), 'yyyy-MM-dd')          AS DT_MOVIMENTO
+    ,CASE
+          WHEN TE.ID_EMPRESA_PF = 'S' THEN 'PF'
+          WHEN UPPER(ME.NM_MARCA) LIKE UPPER('%PME%') THEN 'PME'
+          WHEN (
+                  ME.CD_EMPRESA_GESTORA = '15' 
+                  AND 
+                  UPPER(TRIM(ME.NM_MARCA)) = 'BBDENTAL' 
+                  AND 
+                  UPPER(CEL.NM_CELULA) LIKE UPPER('Núcleo de Atendimento PJ%')                                
+                  ) THEN 'PME'           
+          ELSE
+              'CORP'
+      END                                                             AS PORTFOLIO
+    ,TE.CD_EMPRESA_GRSOC                                              AS GRUPO_GERENCIAL
+    ,TE.CD_EMPRESA                                                    AS CD_EMPRESA 
+    -- ,CASE
+    --       WHEN  te.cd_empresa IN ('001751', '030346', '030349', '789196', '035980', '460371', '618275', '707297', '887882', '541140', '698059', '044869', '760196' ) 
+    --         THEN (SELECT COALESCE(CASE
+    --                       WHEN upper(NAME) = upper('Resumo de Contra Prestação Pecuniária') 
+    --                         THEN 'S'
+    --                         ELSE NULL
+    --                       END,'N') risco_cedido 
+    --               FROM  [FUSION].[oci_ar_memo_lines_all_tl] AS TEMP
+    --               WHERE 1 = 1
+    --               --AND TEMP.org_id = rctla.org_id
+    --               --AND TEMP.memo_line_seq_id = rctla.memo_line_seq_id
+    --               AND TEMP.LANGUAGE = 'PTB'
+    --               AND upper(TEMP.NAME) IN (upper('Resumo de Contra Prestação Pecuniária')) 
+    --           )
+    --         ELSE 'N'
+    --       END                                                         AS RISCO_CEDIDO
+       ,CASE
+          WHEN  te.cd_empresa IN ('001751', '030346', '030349', '789196', '035980', '460371', '618275', '707297', '887882', '541140', '698059', '044869', '760196' ) 
+            THEN (SELECT COALESCE(CASE
+                          WHEN upper(NAME) = upper('PJ-CORRESP (PRE)') 
+                            THEN 'S'
+                            ELSE NULL
+                          END,'N') risco_cedido 
+                  FROM  [FUSION].[OCI_RA_CUST_TRX_TYPES_ALL] AS TEMP
+                  WHERE 1 = 1
+                  AND CAST(rcta.CUST_TRX_TYPE_SEQ_ID AS FLOAT) = CAST(CUST.CUST_TRX_TYPE_SEQ_ID AS FLOAT)--AND TEMP.org_id = rctla.org_id
+                  --AND TEMP.memo_line_seq_id = rctla.memo_line_seq_id
+                  --AND TEMP.LANGUAGE = 'PTB'
+                  AND upper(TEMP.NAME) IN (upper('PJ-CORRESP (PRE)')) 
+              )
+            ELSE 'N'
+          END                                                         AS RISCO_CEDIDO
+    ,REPLACE(TE.CD_EMPRESA_CLI_OPERADORA, 'ODSY', '')                 AS CD_CLI_OPERADORA
+    --count(1) as linhas
+FROM [FUSION].[OCI_RA_CUSTOMER_TRX_ALL] AS RCTA
+  INNER JOIN [FUSION].[OCI_HZ_CUST_ACCOUNTS] AS HCA ON (
+    HCA.CUST_ACCOUNT_ID = RCTA.BILL_TO_CUSTOMER_ID
+    AND 
+    HCA.ACCOUNT_NUMBER NOT IN ('952729', '038620', '040683','952731','915549')
+  )--4933
+  INNER JOIN [DCMS_HML].[ADMPROD_TBOD_EMPRESA] AS TE ON (
+    TRIM(HCA.ACCOUNT_NUMBER) = CAST(REPLICATE('0', 6 -LEN(TE.CD_EMPRESA ))+RTrim(TE.CD_EMPRESA) AS NVARCHAR)      --MODIFICADO  nvarchar(30)    int
+  )--1046
+  INNER JOIN [DCMS_HML].[ADMPROD_TBOD_MARCA_EMPRESA] AS ME ON (
+    ME.CD_MARCA  = TE.CD_MARCA
+    AND
+    ME.CD_EMPRESA_GESTORA IN (1, 15)
+  )--1046
+  INNER JOIN [DCMS_HML].[ADMPROD_TBOD_CELULA] AS CEL ON (
+    CEL.CD_CELULA = TE.CD_CELULA                             -- MODIFICADO   DECIMAL(38,18)  INT
+  ) --1046
+  INNER JOIN [FUSION].[OCI_RA_CUSTOMER_TRX_LINES_ALL] AS RCTLA ON (
+    CAST(CAST(RCTA.CUSTOMER_TRX_ID AS FLOAT) AS BIGINT) = CAST(CAST(RCTLA.CUSTOMER_TRX_ID AS FLOAT) AS BIGINT) --(15,0)) -- MODIFICADO   NUMERIC(15,0)   DECIMAL(38,18)
+    AND 
+    RCTLA.LINE_TYPE = 'LINE'
+    AND 
+    RCTLA.INVENTORY_ITEM_ID IS NULL
+    AND 
+    RTRIM(RCTLA.DESCRIPTION) NOT IN('TAXA DE ASSESSORIA CONTRATO MEDISERVICE')    -- VALIDAR TRIM OU RTRIM
+  )--8
+  INNER JOIN [FUSION].[OCI_RA_CUST_TRX_LINE_GL_DIST_ALL] AS RCTLGDA ON (
+    RCTLA.CUSTOMER_TRX_LINE_ID  = RCTLGDA.CUSTOMER_TRX_LINE_ID
+  ) --8
+  INNER JOIN [FUSION].[OCI_GL_CODE_COMBINATIONS] AS GCC ON (
+    CAST(CAST(RCTLGDA.CODE_COMBINATION_ID AS FLOAT) AS BIGINT) = CAST(CAST(GCC.CODE_COMBINATION_ID AS FLOAT) AS BIGINT)  -- MODIFICADO   DECIMAL(38,18)  NUMERIC(15,0)   
+  ) --40
+  INNER JOIN [FUSION].[OCI_AR_PAYMENT_SCHEDULES_ALL] AS APSA ON (
+    CAST(CAST(RCTA.CUSTOMER_TRX_ID AS FLOAT) AS BIGINT) = CAST(CAST(APSA.CUSTOMER_TRX_ID AS FLOAT) AS BIGINT)  -- MODIFICADO   NUMERIC(15,0)  DECIMAL(11,2)
+    AND 
+    APSA.CLASS = 'CM'  
+  )
+  INNER JOIN [FUSION].[OCI_RA_CUST_TRX_TYPES_ALL] AS RCTTA ON (
+  RCTTA.CUST_TRX_TYPE_SEQ_ID = RCTA.CUST_TRX_TYPE_SEQ_ID 
+  )
+  INNER JOIN [FUSION].[OCI_HZ_CUST_SITE_USES_ALL] AS HCSUA ON (
+    RCTA.BILL_TO_SITE_USE_ID = HCSUA.SITE_USE_ID 
+  )
+  INNER JOIN [FUSION].[OCI_HZ_CUST_ACCT_SITES_ALL] AS HCASA ON (
+    HCSUA.CUST_ACCT_SITE_ID = HCASA.CUST_ACCT_SITE_ID 
+  )--40
+  INNER JOIN [FUSION].[OCI_HZ_PARTY_SITES] AS RA ON (
+     HCASA.PARTY_SITE_ID = RA.PARTY_SITE_ID
+    AND 
+    HCA.ATTRIBUTE_CATEGORY = 'DCMS - PJ'--RA.GLOBAL_ATTRIBUTE2 = '2'
+    AND
+    CAST(CAST(HCASA.SET_ID AS FLOAT) AS BIGINT)   IN (300000011186631,300000011186633) --RA.PARTY_SITE_ID IN( 104, 182)
+)
+  WHERE
+    CAST(CAST(RCTA.ORG_ID AS FLOAT) AS BIGINT) IN(300000005902285, 300000005902311)  --( 104, 182) --RCTA.ORG_ID IN( 104, 182)
+    AND
+    RCTA.PREVIOUS_CUSTOMER_TRX_ID IS NOT NULL
+ AND 
+  FORMAT(CONVERT(DATETIME,RCTLGDA.GL_DATE), 'yyyy-MM-dd')  BETWEEN FORMAT(CONVERT(DATETIME,@c_dStartDate), 'yyyy-MM-dd')
+                                             AND FORMAT(CONVERT(DATETIME,@c_dEndDate) ,'yyyy-MM-dd') -- 92160   
+  -- AND (
+  --       (CAST(CAST(RCTLA.MEMO_LINE_SEQ_ID  AS FLOAT) AS BIGINT) IS NOT NULL AND EXISTS 
+  --         (SELECT 1
+  --         FROM [FUSION].[OCI_AR_MEMO_LINES_ALL_TL] AML -- AJUSTADO (novas_origens AX)
+  --         WHERE CAST(CAST(AML.SET_ID AS FLOAT) AS BIGINT)  = CAST(CAST(rctla.ORG_ID AS FLOAT) AS BIGINT) -- AJUSTADO (novas_origens AX) 
+  --           AND LANGUAGE = 'PTB'
+  --           AND CAST(CAST(AML.memo_line_seq_id AS FLOAT) AS BIGINT) = CAST(CAST(RCTLA.MEMO_LINE_SEQ_ID  AS FLOAT) AS BIGINT)-- AJUSTADO (novas_origens AX)
+  --           AND upper(AML.NAME) IN (upper('Resumo de Contra Prestação Pecuniária'))
+  --         )
+  --       )
+  --         OR (CAST(CAST(RCTLA.MEMO_LINE_SEQ_ID  AS FLOAT) AS BIGINT)IS NULL)
+  --     ) ---718456578
+AND (
+        (CAST(CAST(RCTLA.MEMO_LINE_SEQ_ID  AS FLOAT) AS BIGINT) IS NOT NULL AND EXISTS 
+          (SELECT 1
+          FROM [FUSION].[OCI_RA_CUST_TRX_TYPES_ALL] CUST -- AJUSTADO (novas_origens AX)
+          WHERE 1=1
+          AND CAST(rcta.CUST_TRX_TYPE_SEQ_ID AS FLOAT) = CAST(CUST.CUST_TRX_TYPE_SEQ_ID AS FLOAT)
+  
+            AND upper(CUST.NAME) IN (upper('PJ-CORRESP (PRE)'))
+          )
+        )
+          OR (CAST(CAST(RCTLA.MEMO_LINE_SEQ_ID  AS FLOAT) AS BIGINT)IS NULL)
+      ) ---718456578
+)
+INSERT INTO IFRS17.TB_ODPV_BBDT_PREMIO_MOVIMENTO_HML_TESTE
+SELECT MNEMONICO, INSTID, FATURA, CONTRATO_PLANO, CD_COMPANHIA, CD_ENTIDADE, CD_RAMO, CD_SUBRAMO, CD_PRODUTO, NM_RAMO, NM_SUBRAMO, NM_PRODUTO, ANO_CONTABIL, MES_CONTABIL, TIPO_MOVIMENTO, CD_CONTA_CONTABIL, ENDOSSO, sum(VALOR_MOVIMENTO) AS VALOR_MOVIMENTO, DT_MOVIMENTO, PORTFOLIO, GRUPO_GERENCIAL, CD_EMPRESA, CASE WHEN RISCO_CEDIDO = 'S' THEN 'Y' ELSE 'N' END AS RISCO_CEDIDO, CD_CLI_OPERADORA
+  FROM AJUSTE_CM_PJ     
+GROUP BY MNEMONICO, INSTID, FATURA, CONTRATO_PLANO, CD_COMPANHIA, CD_ENTIDADE, CD_RAMO, CD_SUBRAMO, CD_PRODUTO, NM_RAMO, NM_SUBRAMO, NM_PRODUTO, ANO_CONTABIL, MES_CONTABIL, TIPO_MOVIMENTO, CD_CONTA_CONTABIL, ENDOSSO, DT_MOVIMENTO, PORTFOLIO, GRUPO_GERENCIAL, CD_EMPRESA, CASE WHEN RISCO_CEDIDO = 'S' THEN 'Y' ELSE 'N' END, CD_CLI_OPERADORA;
+
+;

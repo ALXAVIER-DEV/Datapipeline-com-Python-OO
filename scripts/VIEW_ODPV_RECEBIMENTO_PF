@@ -1,0 +1,156 @@
+-- --VIEW_ODPV_RECEBIMENTO_PF
+-- WITH RECEBIMENTO_PF AS (
+--   SELECT  
+--     'ODPV'                                                             AS MNEMONICO
+--     ,CASE GCC.SEGMENT1
+--             WHEN '01'   THEN 'ODPV'
+--             WHEN '05'   THEN 'BBDENTAL'
+--         ELSE 'OUTRO'
+--         END                                                     +
+--       CASE GCC.SEGMENT1
+--             WHEN '01'   THEN '30194-9'
+--             WHEN '05'   THEN '41941-9'
+--         ELSE 'OUTRO'
+--         END                                                     +
+--       '4'                                                       +
+--       HCA.ACCOUNT_NUMBER                                        +
+--       REPLACE(REPLACE(ACRA.RECEIPT_NUMBER,CHAR(10),''),CHAR(13),'') +                 -- VERIFICAR A FUNÇÃO DE REPLACE
+--       CAST(COALESCE(CAST(MSI.CROSS_REFERENCE AS BIGINT),'') AS NVARCHAR)  +
+--       '1'                                                       +
+--       '-' + GCC.SEGMENT4                                        +
+--       '-' + FORMAT(ACRHA.GL_DATE, 'ddMMyyyy')                   +
+--       '-RE-PF'                                                        AS INSTID
+--     ,REPLACE(REPLACE(ACRA.RECEIPT_NUMBER,CHAR(10),''),CHAR(13),'')    AS FATURA       -- VERIFICAR A FUNÇÃO DE REPLACE
+--     ,CAST(TE.CD_EMPRESA          AS NVARCHAR)                   +
+--       CAST(COALESCE(CAST(MSI.CROSS_REFERENCE AS BIGINT),'') AS NVARCHAR)  +
+--       TA.NR_ATENDIMENTO                                               AS CONTRATO_PLANO
+--     ,CASE GCC.SEGMENT1
+--             WHEN '01'   THEN 'ODPV'
+--             WHEN '05'   THEN 'BBDT'
+--         ELSE 'OUTRO'
+--         END                                                           AS CD_COMPANHIA
+--     ,CASE GCC.SEGMENT1
+--             WHEN '01'   THEN '30194-9'
+--             WHEN '05'   THEN '41941-9'
+--         ELSE 'OUTRO'
+--         END                                                           AS CD_ENTIDADE
+--     ,'4'                                                              AS CD_RAMO 
+--     ,''                                                               AS CD_SUBRAMO 
+--     ,CAST(COALESCE(CAST(MSI.CROSS_REFERENCE AS BIGINT),'') AS NVARCHAR)         AS CD_PRODUTO
+--     ,'ODONTOLOGICO'                                                   AS NM_RAMO
+--     ,''                                                               AS NM_SUBRAMO
+--     ,MSI.DESCRIPTION                                                  AS NM_PRODUTO
+--     ,FORMAT(ACRHA.GL_DATE, 'yyyy')                                    AS ANO_CONTABIL
+--     ,FORMAT(ACRHA.GL_DATE, 'MM')                                      AS MES_CONTABIL
+--     ,'RECEBIMENTO'                                                    AS TIPO_MOVIMENTO
+--     ,GCC.SEGMENT4                                                     AS CD_CONTA_CONTABIL
+--     ,CONCAT(HCA.ACCOUNT_NUMBER,'0')                                   AS ENDOSSO
+--     ,ROUND((ARAA.AMOUNT_APPLIED / COUNT(rctla.inventory_item_id) over ( PARTITION BY rctla.customer_trx_id, ACRHA.GL_DATE)), 2) AS VALOR_MOVIMENTO
+--     ,CONVERT(VARCHAR,ACRHA.GL_DATE,103)                               AS DT_MOVIMENTO
+--     ,CASE
+--           WHEN TE.ID_EMPRESA_PF = 'S' THEN 'PF'
+--           WHEN UPPER(ME.NM_MARCA) LIKE UPPER('%PME%') THEN 'PME'
+--           WHEN (
+--                   ME.CD_EMPRESA_GESTORA = '15' 
+--                   AND 
+--                   UPPER(TRIM(ME.NM_MARCA)) = 'BBDENTAL' 
+--                   AND 
+--                   UPPER(CEL.NM_CELULA) LIKE UPPER('Núcleo de Atendimento PJ%')                                
+--                   ) THEN 'PME'           
+--           ELSE
+--               'CORP'
+--       END                                                             AS PORTFOLIO
+--     ,TE.CD_EMPRESA_GRSOC                                              AS GRUPO_GERENCIAL
+--     ,TE.CD_EMPRESA                                                    AS CD_EMPRESA 
+--     ,TP.ID_RISCO_CEDIDO                                               AS RISCO_CEDIDO
+--     ,REPLACE(TE.CD_EMPRESA_CLI_OPERADORA, 'ODSY', '')                 AS CD_CLI_OPERADORA
+-- FROM [FUSION].[OCI_RA_CUSTOMER_TRX_ALL] AS RCTA
+--   INNER JOIN [FUSION].[OCI_HZ_CUST_ACCOUNTS] AS HCA ON (
+--     HCA.CUST_ACCOUNT_ID = RCTA.BILL_TO_CUSTOMER_ID
+--   )
+--   INNER JOIN [DCMS_HML].[ADMPROD_TBOD_ASSOCIADO] AS TA ON (
+--     TRIM(HCA.ACCOUNT_NUMBER) = TRIM(TA.CD_ASSOCIADO)                   
+--   )
+--   INNER JOIN [DCMS_HML].[ADMPROD_TBOD_EMPRESA] AS TE ON (
+--         TE.CD_EMPRESA = CAST(TA.CD_EMPRESA AS INT)                         -- MODIFICADO   INT   NVARCHAR(6)
+--   )
+--   INNER JOIN [DCMS_HML].[ADMPROD_TBOD_MARCA_EMPRESA] AS ME ON (
+--     ME.CD_MARCA  = TE.CD_MARCA
+--     AND
+--     ME.CD_EMPRESA_GESTORA IN (1, 15)
+--   )
+--   INNER JOIN [DCMS_HML].[ADMPROD_TBOD_CELULA] AS CEL ON (
+--     CAST(CEL.CD_CELULA AS INT) = TE.CD_CELULA                             -- MODIFICADO   DECIMAL(38,18)  INT
+--   )
+--   INNER JOIN [FUSION].[OCI_RA_CUSTOMER_TRX_LINES_ALL] AS RCTLA ON (
+--     RCTA.CUSTOMER_TRX_ID = CAST(RCTLA.CUSTOMER_TRX_ID AS NUMERIC(15,0)) -- MODIFICADO   NUMERIC(15,0)   DECIMAL(38,18)
+--   )
+--   INNER JOIN [FUSION].[OCI_AR_PAYMENT_SCHEDULES_ALL] AS APSA ON (
+--     RCTA.CUSTOMER_TRX_ID = CAST(APSA.CUSTOMER_TRX_ID AS NUMERIC(15,0))  -- MODIFICADO   NUMERIC(15,0)  DECIMAL(11,2)
+--     AND 
+--     APSA.CLASS = 'INV'  
+--   )
+--   INNER JOIN [FUSION].[AR_AR_RECEIVABLE_APPLICATIONS_ALL] AS ARAA ON (
+--     ARAA.APPLIED_PAYMENT_SCHEDULE_ID = CAST(APSA.PAYMENT_SCHEDULE_ID AS NUMERIC(15,0))
+--     AND
+--     ARAA.STATUS = 'APP' 
+--     AND 
+--     ARAA.DISPLAY = 'Y'
+--   )
+--   INNER JOIN [FUSION].[AR_AR_CASH_RECEIPTS_ALL] AS ACRA ON (
+--     ACRA.CASH_RECEIPT_ID = ARAA.CASH_RECEIPT_ID  
+--   )
+--   INNER JOIN [FUSION].[AR_AR_CASH_RECEIPT_HISTORY_ALL] AS ACRHA ON (
+--     ACRA.CASH_RECEIPT_ID = ACRHA.CASH_RECEIPT_ID
+--     AND 
+--     ACRHA.FIRST_POSTED_RECORD_FLAG = 'Y'
+--   )
+--   INNER JOIN [FUSION].[AR_AR_RECEIPT_METHOD_ACCOUNTS_ALL] AS ARMAA ON (
+--     ACRA.REMITTANCE_BANK_ACCOUNT_ID = ARMAA.BANK_ACCOUNT_ID
+--     AND
+--     ACRA.RECEIPT_METHOD_ID = ARMAA.RECEIPT_METHOD_ID
+--   )
+--   INNER JOIN [FUSION].[OCI_GL_CODE_COMBINATIONS] AS GCC ON (
+--     ARMAA.CASH_CCID = GCC.CODE_COMBINATION_ID  
+--   )
+--   INNER JOIN [FUSION].[OCI_RA_CUST_TRX_TYPES_ALL] AS RCTTA ON (
+--     RCTTA.CUST_TRX_TYPE_ID = RCTA.CUST_TRX_TYPE_ID
+--     AND 
+--     RCTTA.TYPE = 'INV' 
+--   )
+--   INNER JOIN [FUSION].[OCI_HZ_CUST_SITE_USES_ALL] AS HCSUA ON (
+--     RCTA.BILL_TO_SITE_USE_ID = HCSUA.SITE_USE_ID 
+--   )
+--   INNER JOIN [FUSION].[OCI_HZ_CUST_ACCT_SITES_ALL] AS HCASA ON (
+--     HCSUA.CUST_ACCT_SITE_ID = HCASA.CUST_ACCT_SITE_ID 
+--   )
+--   INNER JOIN [FUSION].[OCI_HZ_PARTY_SITES] AS RA ON (
+--     HCASA.PARTY_SITE_ID = RA.PARTY_SITE_ID
+--     AND 
+--     RA.GLOBAL_ATTRIBUTE2 = '1'
+--     AND
+--     RA.ORG_ID IN( 104, 182)
+--   )
+--   INNER JOIN [FUSION].[APPS_MTL_SYSTEM_ITEMS_B] AS MSI ON (
+--       MSI.INVENTORY_ITEM_ID = CAST(RCTLA.INVENTORY_ITEM_ID AS NUMERIC(18,0))   -- MODIFICADO   NUMERIC(18,0)   DECIMAL(38,18)
+--       AND 
+--       MSI.ORGANIZATION_ID = 107
+--       AND
+--       SUBSTRING(MSI.CROSS_REFERENCE,1,1) in ('0','1','2','3','4','5','6','7','8','9')
+--   )                                                                            -- VERIFICAR SE O CORRETO SERIA LEFT OU INNER
+--   INNER JOIN [DCMS_HML].[ADMPROD_TBOD_PLANO] AS TP ON (
+--         CAST(REPLICATE('0', 11 -LEN(TP.CD_PLANO))+RTrim(TP.CD_PLANO) AS NVARCHAR) = MSI.CROSS_REFERENCE    -- MODIFICADO INT    NVARCHAR(40)
+--   )
+--   WHERE
+--     RCTA.ORG_ID IN( 104, 182)
+--     AND
+--     RCTA.PREVIOUS_CUSTOMER_TRX_ID IS NULL
+--  AND 
+--      FORMAT(ACRHA.GL_DATE, 'yyyy-MM-dd') BETWEEN CAST(@c_dStartDate AS DATE)
+--                                             AND CAST(@c_dEndDate AS DATE) 
+-- )
+-- INSERT INTO IFRS17.TB_ODPV_BBDT_PREMIO_MOVIMENTO_HML_TESTE
+-- SELECT MNEMONICO, INSTID, FATURA, CONTRATO_PLANO, CD_COMPANHIA, CD_ENTIDADE, CD_RAMO, CD_SUBRAMO, CD_PRODUTO, NM_RAMO, NM_SUBRAMO, NM_PRODUTO, ANO_CONTABIL, MES_CONTABIL, TIPO_MOVIMENTO, CD_CONTA_CONTABIL, ENDOSSO, CAST(SUM(VALOR_MOVIMENTO) AS DECIMAL(11,2)) AS VALOR_MOVIMENTO, DT_MOVIMENTO, PORTFOLIO, GRUPO_GERENCIAL, CD_EMPRESA, CASE WHEN RISCO_CEDIDO = 'S' THEN 'Y' ELSE 'N' END AS RISCO_CEDIDO, CD_CLI_OPERADORA
+--   FROM RECEBIMENTO_PF     
+-- GROUP BY MNEMONICO, INSTID, FATURA, CONTRATO_PLANO, CD_COMPANHIA, CD_ENTIDADE, CD_RAMO, CD_SUBRAMO, CD_PRODUTO, NM_RAMO, NM_SUBRAMO, NM_PRODUTO, ANO_CONTABIL, MES_CONTABIL, TIPO_MOVIMENTO, CD_CONTA_CONTABIL, ENDOSSO, DT_MOVIMENTO, PORTFOLIO, GRUPO_GERENCIAL, CD_EMPRESA, CASE WHEN RISCO_CEDIDO = 'S' THEN 'Y' ELSE 'N' END, CD_CLI_OPERADORA
+-- ;
