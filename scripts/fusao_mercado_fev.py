@@ -2,6 +2,8 @@ import json
 import csv
 
 
+
+
 def get_columns(data):
     return list(data[-1].keys())
 
